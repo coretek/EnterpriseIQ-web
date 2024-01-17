@@ -1,0 +1,568 @@
+﻿@using EnterpriseIQ.Web.Helper.PortalContext
+@{
+    ViewBag.Title = "Chat";
+}
+
+<script>
+     $(document).ready(function() {
+         CallHistory();
+         $("#btnNew").on("click", function () {
+             $("#csrchtxt").prop("disabled", false);
+             $("#btnSearch").prop("disabled", false);
+             $("#txtCompletion").html("");
+             $("#attachcontainer").empty();
+             $("#csrchtxt").val("");
+         });
+
+         $('#csrchtxt').keypress(function (e) {
+             var key = e.which;
+             if (key == 13) // the enter key code
+             {
+                 CallSearchFun();
+                 return false;
+             }
+         });
+     });
+
+    function CallHistory() {
+        $.ajax({
+            url: '@Url.Action("GetCosmosData", "EnterpriseIQ")', // Replace "ControllerName" with your actual controller name
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                // Assuming data is an array of objects with a property named 'text'
+                $('#dataList').empty();
+                var ul = $('#dataList');
+                $.each(data, function (index, item) {
+                    var listItem = '<span style="margin-bottom:10px;cursor:pointer" onclick=getChat("' + item.id + '") id="' + item.id + '" title="' + item.prompt +'" ><i class="fas fa-comment" ></i> ' + item.prompt + '</span></br>';
+                    ul.append(listItem);
+                });
+            },
+            error: function () {
+                console.error('Something went wrong.');
+            }
+        });
+    }
+
+    function getChat(id) {
+        $.ajax({
+            url: '@Url.Action("GetCosmosDataById", "EnterpriseIQ")', // Replace "ControllerName" with your actual controller name
+            data: { id: id },
+            type: 'POST',
+            dataType: 'json',
+            success: function (response) {
+                FillData(response, "history");
+                $("#csrchtxt").prop("disabled", true);
+                $("#btnSearch").prop("disabled", true);
+                $("#csrchtxt").val(response.prompt);
+            },
+            error: function () {
+                console.error('Something went wrong.');
+            }
+        });
+    }
+
+    function CallSearchFun() {
+        var targetDiv = $("#txtCompletion");
+        var overlay = $("<div class='overlay'><i class='fa fa-gear fa-spin' style='font-size:50px;color:white'></i></div>").appendTo(targetDiv);
+        $("#imageOverlay").show();
+
+        var searchText = $("#csrchtxt").val(); // Get the text you want to send to the controller
+        if (searchText.trim().length == 0) {
+            return;
+        }
+
+      $.ajax({
+          type: "POST", // You can also use "GET" if your controller action supports it
+          url: "@Url.Action("EnterpriseIQOpenAI", "EnterpriseIQ")", // Replace "YourControllerName" with the actual name of your controller
+          data: { text: searchText }, // Data to send to the controller method
+          dataType: "json", // Expected data type from the controller
+          success: function (response) {
+              if (response == "503") {
+                  $("#txtCompletion").html("OpenAI Service is unavailable at moment, try after sometime or call system administrator!");
+              }
+              if (response == "500") {
+                  $("#txtCompletion").html("Internal Server Error, try after sometime or call system administrator!");
+              }
+              else {
+                  FillData(response, "new");
+              }
+          },
+          error: function (error) {
+              var cnt = 0;
+              // Handle any errors that occur during the AJAX call
+          }
+      });
+    }
+
+    function FillData(response, param) {
+        if (response != null) {
+            var cnt = response.odatacount;
+            var searchText = $("#csrchtxt").val(); // Get the text you want to send to the controller
+            var keywords = searchText.split(" ");
+            keywords.push("AdditionalKeyword");
+            $("#attachcontainer").empty();
+            var sentences = response.text.split(/\[doc\d+\]/g).filter(Boolean);
+
+            // Format the sentences as an unordered list
+            var formattedHTML = '<ul>';
+            $.each(sentences, function (index, sentence) {
+                if (sentence != null && sentence.trim().length > 0 && sentence != ".") {
+
+                    if (sentence.charAt(0) === '.') {
+                        // Remove the first character (period)
+                        sentence = sentence.substring(1);
+                        sentence += '.';
+                    }
+
+                    formattedHTML += '<li>' + sentence.trim() + '</li>';
+                }
+            });
+            formattedHTML += '</ul>';
+
+            // Display the formatted information in the 'insurance-info' div
+            $('#txtCompletion').html(formattedHTML);
+
+            if (param == "new") {
+                $("#imageOverlay").show();
+                $.ajax({
+                    type: "POST", // You can also use "GET" if your controller action supports it
+                    url: "@Url.Action("EnterpriseIQOpenAIFiles", "EnterpriseIQ")", // Replace "YourControllerName" with the actual name of your controller
+                    //data: { res: response.messageContent, id: response.id, prompt: response.prompt, txt: response.text }, // Data to send to the controller method
+                    data: JSON.stringify({ id: response.id, prompt: response.prompt, txt: response.text, res: response.messageContent }),
+                    dataType: "json", // Expected data type from the controller
+                    contentType: "application/json; charset=utf-8",
+                    success: function (response) {
+                        if (response != null) {
+                            FormImages(response);
+                            CallHistory();
+                        }
+                    },
+                    complete: function () {
+                        $("#imageOverlay").hide();
+                    }
+                });
+
+            }
+            else {
+                FormImages(response);
+            }
+        }
+        else {
+            //$("#txtcnt").html("Total documents found: 0");
+            $("#attachcontainer").empty();
+            $("#imageOverlay").hide();
+        }
+    }
+
+    function FormImages(response) {
+        var cnt = response.odatacount;
+        var searchText = $("#csrchtxt").val(); // Get the text you want to send to the controller
+        var keywords = searchText.split(" ");
+        keywords.push("AdditionalKeyword");
+        $("#attachcontainer").empty();
+
+        var wordCount = 0;
+        $.each(response.value, function (index, item) {
+            var divElement = $('<div class="scrollableDiv"></div>');
+            var testText = item.text;
+            $.each(keywords, function (index, keyword) {
+                // Create a regular expression to match the keyword with word boundaries
+                keyword = keyword.replace(/[^\w\s]/gi, '');
+                if (keyword.trim().length > 0) {
+                    var regex = new RegExp("\\b" + keyword + "\\b", "gi");
+
+                    // Use the .html() method to replace the matched keywords with highlighted HTML
+                    item.text = item.text.replace(regex, '<span class="highlighted">' + keyword + '</span>');
+                }
+            });
+
+            var lastUnderscoreIndex = item.fileName.lastIndexOf('_');
+
+            // Get the substring from the start of the input string to the last underscore
+            item.fileName = item.fileName.substring(0, lastUnderscoreIndex);
+
+            var filenameElement = $('<b><div style="font-weight:bold;cursor: pointer;color: blue;text-decoration: underline;" onclick="downloadFile(\'' + item.fileName + '\')">' + item.fileName + '</div></b></br>');
+            //var fileImageElement = $('<img id="ocrImg" class="img" ondblclick="callOCRfun(\'' + item.imgUrl + '\', \''+ escapedText +'\')" src="' + item.imgUrl + '" />');
+
+            var fileImageElement = $('<img id="ocrImg" width="100%"  class="img" src="' + item.imgUrl + '" />');
+
+            fileImageElement.attr('data-text', item.text); // Set a custom data-text attribute with item.text
+
+            // Add an event listener for double-click
+            fileImageElement.on('dblclick', function () {
+                var imageUrl = $(this).attr('src');
+                var text = $(this).attr('data-text'); // Retrieve the text from the data-text attribute
+                callOCRfun(imageUrl, text);
+            });
+
+            divElement.append(filenameElement);
+
+            fileImageElement.on('load', function () {
+
+                divElement.append(fileImageElement);
+            });
+
+            var mergDiv = $('<div class="row"><div class="col-md-12"></div></div>');
+
+            // Append the div to the container
+            $('#attachcontainer').append(mergDiv);
+
+            mergDiv.find('.col-md-12').append(divElement);
+        });
+    }
+
+    function downloadFile(filename) {
+        window.open("/EnterpriseIQ/DownloadFileAsync?filename=" + filename, "_blank");
+
+        //window.location.href = "/EnterpriseIQ/DownloadFileAsync?filename=" + filename;
+        return false;
+        //$.ajax({
+        //    type: "POST", // or "GET" depending on your server-side setup
+        //    url: "/EnterpriseIQ/DownloadFileAsync", // Replace with your controller's URL
+        //    data: { filename: filename },
+        //    success: function (data) {
+        //        // Handle success (if needed)
+        //    },
+        //    error: function (error) {
+        //        console.error("Error:", error);
+        //    }
+        //});
+    }
+
+    function callOCRfun(imageUrl, text) {
+        $("#popupImag").attr("src", imageUrl);
+        $("#popupText").html(text);
+        $('#myModal').modal('show');
+    }
+
+    $(document).ready(function() {
+    // Print button click event
+    $('#printButton').click(function() {
+        window.print();
+    });
+
+    // Download button click event
+    $('#downloadButton').click(function() {
+        // Assuming you want to download the content of #popupText
+        var textToDownload = $('#popupText').text();
+        var blob = new Blob([textToDownload], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'downloaded-text.txt';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+
+        $('#closeModal').on('click', function () {
+            $('#myModal').modal('hide');
+        });
+});
+
+</script>
+
+<style>
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    #txtCompletion {
+        /*white-space: pre-line;*/ /* Preserve line breaks */
+        font-size: large;
+        background-color: #f9f9f9;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        max-height: 700px;
+        overflow-y: auto;
+    }
+
+    .img {
+        max-width: 100%; /* Ensure the image doesn't exceed the container width */
+        height: auto; /* Maintain the image's aspect ratio */
+        display: block; /* Remove extra space below the image */
+        margin: 0 auto; /* Center the image horizontally within the container */
+    }
+
+    .highlighted {
+        background-color: yellow;
+        font-weight: bold;
+    }
+
+    .scrollableDiv {
+        height: 300px; /* Set a fixed height */
+        border: 2px solid #ccc; /* Add a border */
+        overflow-y: auto; /* Enable vertical scrollbar when content overflows */
+    }
+
+    /* Optional: Style the content inside the scrollable div */
+    .scrollableContent {
+        padding: 10px; /* Add padding to the content */
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+
+    header {
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .container {
+        /*max-width: 800px;*/
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-top: 20px;
+        max-width: 100%;
+    }
+
+    .search-button {
+        padding: 10px 20px;
+        background-color: orangered;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 5px;
+    }
+
+    .search-results {
+        margin-top: 20px;
+        position: relative;
+    }
+
+    .search-results-img {
+        margin-top: 20px;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    .search-item {
+        background-color: #f9f9f9;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        height: 700px;
+        position: relative; /* Set the inner div to relative position */
+    }
+
+    .search-item-img {
+        background-color: #f9f9f9;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        max-height: 700px;
+        height: 700px;
+        overflow-y: auto;
+        position: relative; /* Set the inner div to relative position */
+    }
+
+    .search-input-container {
+        position: absolute;
+        bottom: 10px; /* Set the distance from the bottom */
+        left: 10px; /* Set the distance from the left */
+        display: flex;
+        align-items: center; /* Center items vertically */
+        width: 100%;
+    }
+
+    .search-input {
+        margin-right: 10px; /* Add some space between input and button */
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-top: 20px;
+    }
+
+    .search-button {
+        /* Your button styles */
+        margin-right: 20px;
+    }
+</style>
+<style>
+    .modal-full {
+        min-height: 100%;
+        margin: 0;
+    }
+
+    .modal-content-full {
+        min-height: 100vh;
+        min-width: 100vw;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .modal-body-full {
+        overflow-y: auto;
+        height: 100%;
+    }
+
+    .modal-vertical-split {
+        display: flex;
+        height: 100%;
+    }
+
+    .modal-left {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        border-right: 1px solid #ccc; /* Add a vertical border on the right side of modal-left */
+    }
+
+    .modal-right {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+    }
+
+    #popupImag {
+        max-width: 100%; /* Ensures the image does not exceed the modal-left container */
+        height: auto; /* Maintains the aspect ratio of the image */
+    }
+
+    #popupText {
+        word-wrap: break-word; /* Allow long words to be broken and wrap onto the next line */
+        overflow-wrap: break-word; /* Wrap long words as necessary if they overflow the container */
+        white-space: normal; /* Allow text to wrap within the container */
+        width: 100%; /* Set a specific width for the container */
+        max-height: 100%; /* Set a specific max-height for the container */
+        overflow-y: auto; /* Enable vertical scroll if the content overflows the container */
+    }
+
+    .chatcontainer {
+        border: 2px solid #dedede;
+        border-radius: 15px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .history-item {
+        background-color: rgba(0,0,0,0.5);
+        padding: 5px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(0,0,0,0.5);
+        border-radius: 5px;
+        height: 720px;
+        position: relative; /* Set the inner div to relative position */
+    }
+</style>
+@{
+    var themeId = (new PortalPrincipalUser(System.Web.HttpContext.Current.User as System.Security.Claims.ClaimsPrincipal));
+    if (string.IsNullOrEmpty(themeId.UserTheme))
+    {
+        themeId.UserTheme = "#0C4B6D"; // Replace with your default theme color
+    }
+
+}
+<main>
+    <div class="chatcontainer">
+        <div id="customizableElementIndex" class="row" style="background-color: @themeId.UserTheme;height:750px">
+            <div class="col-md-2">
+                <div class="search-results">
+                    <div class="history-item">
+                        <div style="text-align:center;margin-top:5px;">
+                            <button type="button" id="btnNew" class="btn btn-outline-secondary" style="width: 80%; color: white">+ New Chat</button>
+                        </div>
+                        <hr />
+                        <div style="color: white; white-space: nowrap; overflow-y:auto; overflow-x:hidden; text-overflow: ellipsis;height:620px" id="dataList"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="search-results">
+                    <div class="search-item">
+                        <div id="txtCompletion" style="overflow:auto;height:580px"></div>
+                    </div>
+                    <div class="search-input-container">
+                        <textarea rows="3" id="csrchtxt" class="search-input" placeholder="Enter your search term"></textarea>
+                        <button id="btnSearch" class="search-button" onclick="CallSearchFun()">Search</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="search-results">
+                    <div class="search-results-img">
+                        <div id="attachcontainer" class="search-item-img"></div>
+                        <div id="imageOverlay" class='overlay' style="display:none;"><i class='fa fa-gear fa-spin' style='font-size:50px;color:white'></i></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="printable-content">
+        <!-- The Modal -->
+        <div class="modal fade modal-full" id="myModal">
+            <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-full">
+                <div class="modal-content modal-content-full">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h4 class="modal-title">Full-Screen Modal</h4>
+                        <div class="ml-auto" style="text-align:right">
+                            <!-- ml-auto pushes the content to the right -->
+                            <button type="button" class="btn btn-primary" id="printButton">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                            <button type="button" class="btn btn-success" id="downloadButton">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <button type="button" class="btn btn-dark" id="closeModal">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="modal-body modal-body-full modal-vertical-split">
+                        <div class="modal-left">
+                            <!-- Left Section Content -->
+                            <img id="popupImag" />
+                        </div>
+                        <div class="modal-right">
+                            <!-- Right Section Content -->
+                            <div id="popupText"></div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                        <!-- Footer content, if any -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>

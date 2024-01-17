@@ -1,0 +1,97 @@
+﻿@model List<EnterpriseIQ.Web.Models.LogsDto>
+@{
+    ViewBag.Title = "Logs";
+}
+
+<h2>Logs</h2>
+<script>
+    $(document).ready(function () {
+        // Handle radio button change event
+        $('input[name="radioGroup"]').on('change', function () {
+            // Get the selected value
+            var selectedValue = $(this).val();
+
+            // Show/hide rows based on the selected value
+            $('#logsTable tbody tr').each(function () {
+                var rowValue = $(this).find('td:first').text();
+                if (rowValue === selectedValue) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        $('#checkAll').on('change', function () {
+            if ($(this).prop('checked')) {
+                // If "All" is selected, show all rows
+                $('#logsTable tbody tr').show();
+            }
+        });
+    });
+</script>
+<style>
+    /* Style to display list items horizontally */
+    ul.horizontal-checkbox-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+    }
+
+        /* Style to remove default checkbox styles and add some spacing */
+        ul.horizontal-checkbox-list li {
+            margin-right: 10px;
+        }
+
+        /* Optional: Style to customize the appearance of checkboxes */
+        ul.horizontal-checkbox-list input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+    .table-wrapper {
+        max-height: 700px; /* Set the maximum height for the table */
+        overflow-y: auto; /* Add a vertical scrollbar if the content overflows */
+    }
+</style>
+<main>
+    <ul class="horizontal-checkbox-list">
+        <li><label><input type="radio" name="radioGroup" id="checkAll" checked> All</label></li>
+        <li><label><input type="radio" name="radioGroup" value="Upload"> Document Upload</label></li>
+        <li><label><input type="radio" name="radioGroup" value="DeleteDocument"> Document Delete</label></li>
+        <li><label><input type="radio" name="radioGroup" value="DeleteAllDocuments"> Documents Delete All</label></li>
+        <li><label><input type="radio" name="radioGroup" value="ProcessPDFAndImageFiles"> Process PDF & Image Files</label></li>
+        <li><label><input type="radio" name="radioGroup" value="ProcessWordtoImageFileAsync"> Process Word File</label></li>
+        <li><label><input type="radio" name="radioGroup" value="RefreshIndexing"> Refresh Indexing</label></li>
+        <li><label><input type="radio" name="radioGroup" value="OpenAIChatLogs"> EntIQ Logs</label></li>
+        <!-- Add more checkboxes as needed -->
+    </ul>
+    <div class="table-wrapper" style="font-size:small">
+        <table id="logsTable" class="table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>User</th>
+                    <th>DateTime</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var logsDetails in Model)
+                {
+                    <tr>
+                        <td>@logsDetails.eiqtype</td>
+                        <td>@logsDetails.upn</td>
+                        <td>@logsDetails.dateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>
+                            @foreach (var logEntry in logsDetails.consoleHistory)
+                            {
+                                @logEntry<br />
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</main>
+

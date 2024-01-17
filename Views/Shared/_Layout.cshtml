@@ -1,0 +1,151 @@
+﻿@using EnterpriseIQ.Web.Helper.PortalContext
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - EnterpriseIQ</title>
+    @Styles.Render("~/Content/css")
+    @Scripts.Render("~/bundles/modernizr")
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script>
+        function changeColor() {
+            if (confirm("Changing theme will ask you to login again to make it effect, are you sure you want to continue?")) {
+                var colorPickerValue = $('#colorPicker').val();
+                //$('#customizableElement').css('background-color', colorPickerValue);
+                //$('#customizableElementIndex').css('background-color', colorPickerValue);
+
+                $.ajax({
+                    type: "POST",
+                    url: "/Account/UpdateTheme",
+                    data: { themeValue: colorPickerValue },
+                    success: function (response) {
+                        window.location = "/Account/SignOut";
+                    },
+                    error: function () {
+                        alert("Error deleting blob. Please try again later.");
+                    }
+                });
+            }
+        }
+
+    </script>
+    <script>
+        // jQuery is used here for simplicity. Make sure to include jQuery in your project.
+        $(document).ready(function () {
+            $("#settings-dropdown-toggle").click(function () {
+                $("#settings-dropdown").toggle();
+            });
+
+            // Close the dropdown if the user clicks outside of it
+            $(document).on("click", function (event) {
+                if (!$(event.target).closest("#settings-dropdown-toggle, #settings-dropdown").length) {
+                    $("#settings-dropdown").hide();
+                }
+            });
+        });
+    </script>
+
+    <style>
+        /* Style the dropdown */
+        #settings-dropdown {
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            white-space: nowrap; /* Prevent line breaks within dropdown items */
+        }
+
+            /* Style the dropdown items */
+            #settings-dropdown a {
+                color: black;
+                padding: 12px 16px;
+                text-decoration: none;
+                display: block;
+            }
+
+                #settings-dropdown a:hover {
+                    background-color: #f1f1f1;
+                }
+    </style>
+</head>
+@{
+    var themeId = (new PortalPrincipalUser(System.Web.HttpContext.Current.User as System.Security.Claims.ClaimsPrincipal));
+    if (string.IsNullOrEmpty(themeId.UserTheme))
+    {
+        themeId.UserTheme = "#0C4B6D"; // Replace with your default theme color
+    }
+}
+<body>
+    <nav id="customizableElement" class="navbar navbar-expand-sm navbar-toggleable-sm" style="background-color: @themeId.UserTheme">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+            <ul class="navbar-nav">
+                <!-- Your other navigation items go here -->
+                <li class="nav-item">
+                    <a style="margin-left: 10px; cursor: pointer; color: white; display: inline-block;" href="/Admin/UploadSiteLogo">
+                        <img id="myimage" alt="Brand Logo" style="margin-bottom: 6px; position: relative; max-width: 100%;max-height:55px" src="~/Images/Brand_Logo.png" />
+                    </a>
+                    <a class="nav-link" style="margin-left: 10px; cursor: pointer; color: white; display: inline-block;" href="/Home"><i class="fas fa-home"></i> Home</a>
+                    <a class="nav-link" style="margin-left: 5px; cursor: pointer; color: white; display: inline-block;" href="/EnterpriseIQ"><i class="fas fa-comment"></i> EntIQ</a>
+                </li>
+                <!-- Add more navigation items as needed -->
+            </ul>
+            <!-- Icons for Settings and Profile -->
+            <div class="navbar-nav" style="margin-right:10px;">
+                @*@Html.Partial("_LoginPartial")*@
+                @if (Request.IsAuthenticated)
+                {
+                    <text>
+                        <ul class="navbar-nav navbar-right" style="color:white">
+                            <li class="navbar-text" style="color: white;">
+                                Hello, @User.Identity.Name!
+                            </li>
+                        </ul>
+                    </text>
+                }
+                <li class="nav-item" style="position: relative;">
+                    <a class="nav-link" href="#" style="color:white" id="settings-dropdown-toggle">
+                        <i class="fas fa-cog"></i> <!-- Settings Icon -->
+                    </a>
+                    <div id="settings-dropdown" style="display: none; position: absolute; top: 100%; left: -160px;">
+                        <!-- Dropdown items go here -->
+                        <a href="/Admin" class="dropdown-item">Admin</a>
+                        <a href="/Admin/Logs" class="dropdown-item">Logs</a>
+                        <a href="/Home/FAQs" class="dropdown-item">FAQs</a>
+                        @if (Request.IsAuthenticated)
+                        {
+                            @Html.ActionLink("Sign out", "SignOut", "Account")
+                        }
+                        else
+                        {
+                            @Html.ActionLink("Sign in", "SignIn", "Account")
+                        }
+                        <input class="dropdown-item" type="color" id="colorPicker" value="@themeId.UserTheme" onchange="changeColor()" />
+                    </div>
+                </li>
+            </div>
+        </div>
+    </nav>
+
+    <div class="body-content">
+        @RenderBody()
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    @RenderSection("scripts", required: false)
+</body>
+</html>
+<script>
+    $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
+        if (jqxhr.status == 401) {
+            // Redirect to the login page or show a login modal
+            alert("Session expired, kindly log-in back");
+            window.location.href = '/Account/SignIn';
+        }
+    });
+</script>

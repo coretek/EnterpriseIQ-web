@@ -1,0 +1,127 @@
+﻿@{
+    ViewBag.Title = "Upload Site Logo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script>
+    $(document).ready(function () {
+        $('#btnSubmit').click(function () {
+            // Checking whether FormData is available in browser
+            if (window.FormData !== undefined) {
+                var fileUpload = $("#FileUpload").get(0);
+                var files = fileUpload.files;
+                var _validFileExtensions = [".png"];
+                if (files.length > 0) {
+                    // Looping over all files and add it to FormData object
+                    for (var i = 0; i < files.length; i++) {
+                        if (files[i].name.substr(files[i].name.length - _validFileExtensions[0].length, _validFileExtensions[0].length).toLowerCase() != _validFileExtensions[0].toLowerCase()) {
+                            $("#msg").text("Please Upload a logo of type .png only.")
+                            $('#msg').css('display', 'block');
+                            return false;
+                        }
+
+                        var reader = new FileReader();
+                        reader.readAsDataURL(files[i]);
+
+                        var data = {
+                            fileName: files[i].name,
+                            fileType: files[i].type,
+                            base64: '',
+                            customerId: customerId
+                        };
+
+                        reader.onload = function () {
+                            data.base64 = reader.result;
+                            SaveData(data);
+                        }
+                    }
+                }
+                else {
+                    $("#msg").text("Please Upload a logo for your site.")
+                    $('#msg').css('display', 'block');
+                }
+            }
+        });
+
+        $("#btnDelete").click(function () {
+            $.ajax({
+                url: '@Url.Action("DeleteSiteLogo", "CSPCustomers")',
+                type: "POST",
+                data: { CustomerId: customerId },
+                success: function (result) {
+                    if (result == "True") { 
+                        $("#msg").text("Successfully deleted logo. Logo will set to default within a minute with refresh page. Thank You.")
+                       $('#msg').css('display', 'block');
+                         //RefreshLogo();
+                    }
+                    else {
+                         $("#msg").text("Something went wrong. Please try after sometime or contact support. Thank You.")
+                        $('#msg').css('display', 'block');
+                    }
+                },
+                error: function (result) {
+                     $("#msg").text("Something went wrong. Please try after sometime or contact support. Thank You.")
+                       $('#msg').css('display', 'block');
+                }
+            });                  
+        });
+
+
+        function SaveData(data) {
+            $.ajax({
+                url: '@Url.Action("SubmitUploadSiteLogo", "CSPCustomers")',
+                type: "POST",
+                data: { file: data }
+,
+                success: function (result) {
+                    if (result == "True") {
+                        $("#msg").text("Successfully uploaded logo. Thank You.")
+                       $('#msg').css('display', 'block');
+                         //RefreshLogo();
+                    }
+                    else {
+                         $("#msg").text("Something went wrong. Please try after sometime or contact support. Thank You.")
+                        $('#msg').css('display', 'block');
+                    }
+                },
+                error: function (result) {
+                     $("#msg").text("Something went wrong. Please try after sometime or contact support. Thank You.")
+                       $('#msg').css('display', 'block');
+                }
+            });
+        }
+    });
+</script>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Upload Site Logo</div>
+                <div style="color:blue; font-style:italic">Please upload only .png type file. This Site Logo will appear on top left corner of Insights Site. Once you upload it will replace existing logo.</div>
+                <div style="color:darkorange; font-style:italic">For better performance, try uploading logo with dimension height="40px" width="100px" or equal ratio, and size no greater then 50kb.</div>
+            </div>
+            <form action="/Admin/SaveUploadSiteLogo" method="post" enctype="multipart/form-data">
+                <div class="card-body">
+                    <span style="color:red;display:none" id="msg"></span>
+                    <div class="form-group form-floating-label">
+                        <span>Upload Site Logo</span>
+                        <input id="FileUpload" type="file" name="logoFile" class="form-control input-solid" required>
+                    </div>
+                </div>
+                <div class="card-action">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input class="btn btn-success" type="submit" value="Upload Logo" />
+                        </div>
+                    </div>
+                </div>
+                @*<div class="card-action">
+            <div class="row">
+                <div class="col-md-12">
+                    <input class="btn btn-danger" type="button" value="Delete Logo" id="btnDelete">
+                </div>
+            </div>
+        </div>*@
+            </form>
+        </div>
+    </div>
+</div>
