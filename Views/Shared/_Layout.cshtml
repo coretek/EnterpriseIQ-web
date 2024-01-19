@@ -1,4 +1,5 @@
 ﻿@using EnterpriseIQ.Web.Helper.PortalContext
+@using Newtonsoft.Json
 <!DOCTYPE html>
 <html>
 <head>
@@ -46,6 +47,49 @@
             });
         });
     </script>
+    @{
+        bool isAdmin = User.IsInRole("Admin");
+    }
+
+    <script>
+        $(document).ready(function () {
+            var userIsAdmin = @Html.Raw(JsonConvert.SerializeObject(isAdmin));
+            //GetTitle();
+
+            if (userIsAdmin) {
+                $('#txtTitle').click(function () {
+                    var newTitle = prompt("Enter new title:", $(this).text());
+                    if (newTitle) {
+                        if (confirm("Changing Title will ask you to login again to make it effect, are you sure you want to continue?")) {
+                            $(this).text(newTitle);
+                            // Send the new title to the server
+                            $.ajax({
+                                url: '@Url.Action("UpdateTitle", "Admin")', // Only works inside a Razor view
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ title: newTitle }),
+                                success: function (response) {
+                                    window.location = "/Account/SignOut";
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error("Error updating title: " + error);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+
+        //function GetTitle() {
+        //    var nocache = new Date().getTime(); // Get current time
+        //    $.getJSON('Images/Title.json?_=' + nocache, function (data) {
+        //        // Update the HTML element
+        //        $('#txtTitle').text(data.Title);
+        //    });
+        //}
+    </script>
 
     <style>
         /* Style the dropdown */
@@ -76,6 +120,10 @@
     {
         themeId.UserTheme = "#0C4B6D"; // Replace with your default theme color
     }
+    if (string.IsNullOrEmpty(themeId.WebTitle))
+    {
+        themeId.WebTitle = "Title"; // Replace with your default theme color
+    }
 }
 <body>
     <nav id="customizableElement" class="navbar navbar-expand-sm navbar-toggleable-sm" style="background-color: @themeId.UserTheme">
@@ -94,9 +142,14 @@
                 </li>
                 <!-- Add more navigation items as needed -->
             </ul>
+            <ul class="navbar-nav navbar-center" style="color:white">
+                <li class="navbar-text" style="color: white;">
+                    <span style="font-size:x-large;cursor:pointer" id="txtTitle">@themeId.WebTitle</span>
+                </li>
+            </ul>
             <!-- Icons for Settings and Profile -->
             <div class="navbar-nav" style="margin-right:10px;">
-                @*@Html.Partial("_LoginPartial")*@
+
                 @if (Request.IsAuthenticated)
                 {
                     <text>

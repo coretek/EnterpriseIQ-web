@@ -300,6 +300,11 @@
       "httpHeaders": {}
     }
   ],
+  "cognitiveServices": {
+    "@odata.type": "#Microsoft.Azure.Search.CognitiveServicesByKey",
+    "key": "##cognitiveserviceskey##",
+    "description": "AI MultiService Account"
+  },
   "knowledgeStore": null,
   "indexProjections": null,
   "encryptionKey": null
