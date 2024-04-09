@@ -80,6 +80,28 @@
             });
         }
     }
+
+    function SaveMessage() {
+        if (confirm("Are you sure you want to Update this System Message?")) {
+            $.ajax({
+                type: "POST",
+                url: "/Admin/UpdateSystemMessage",
+                data: { sysmsg: $("#txtSystemMessage").val() },
+                success: function (response) {
+                    if (response.success) {
+                        alert("System Message updated successfully.");
+                        location.reload(); 
+                    } else {
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function () {
+                    alert("Error Updating System Message. Please try again later.");
+                }
+            });
+        }
+    }
+
     function formatElapsedTime() {
         var date = new Date();
 
@@ -252,6 +274,7 @@
                 });
             }
         });
+
     });
 </script>
 <main>
@@ -317,7 +340,17 @@
     </div>
     <div class="separator">
         <hr class="left" />
-        <span class="separator-text">Step3: Refresh EnterpriseIQ Index</span>
+        <span class="separator-text">Step3: System Message (Optional)</span><br />
+        <span style="font-size:small;color:grey">Give the EIQ model instructions about how it should behave and any context it should reference when generating a response. Keep empty if not needed.</span>
+        <hr class="right" />
+    </div>
+    <div>
+        <textarea id="txtSystemMessage" rows="5" cols="110">@ViewBag.SysMsg</textarea>
+        <button class="btn btn-primary" onclick="SaveMessage()" style="margin-left:10px">Save</button>
+    </div>
+    <div class="separator">
+        <hr class="left" />
+        <span class="separator-text">Step4: Refresh EnterpriseIQ Index</span>
         <hr class="right" />
     </div>
     <button id="btnRefreshCollection" class="btn btn-danger" style="margin-left:10px">Refresh Collection</button>
@@ -325,5 +358,4 @@
             <i class="fas fa-cog fa-spin"></i>
         </div>*@
     <div id="resultMessage" style="margin-top: 10px; background-color: rgba(0,0,0,0.5);color:white; padding: 10px; "></div>
-
 </main>
