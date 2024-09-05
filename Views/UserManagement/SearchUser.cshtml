@@ -1,0 +1,243 @@
+﻿@model List<EnterpriseIQ.Web.Models.LogsDto>
+@{
+    ViewBag.Title = "Search Users";
+}
+
+<h2>Search Users</h2>
+<style>
+    .separator-text {
+        padding: 0 10px;
+        font-weight: bold; /* Apply bold font weight */
+        color: #555; /* Set the desired color for the text */
+        background-color: #eee6e6;
+    }
+
+    .table-wrapper {
+        max-height: 300px; /* Set the maximum height for the table */
+        overflow-y: auto; /* Add a vertical scrollbar if the content overflows */
+    }
+</style>
+<main>
+    <div>
+        <input type="text" id="searchTextBox" placeholder="Enter search text..." />
+        <button  class="btn btn-info" id="searchButton">Search</button>
+    </div>
+    <br />
+    <div>
+        <table class="table" id="resultsTable" border="1" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Display Name</th>
+                    <th>User Principal Name</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Results will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <button  class="btn btn-success" id="assignRoleButton" style="display: none;">Assign Role</button>
+    <br /><br />
+
+    <h2>Edit User's Role</h2>
+    <table class="table" id="getResultTable" border="1">
+        <thead>
+            <tr>
+                <th>Select</th>
+                <th>Display Name</th>
+                <th>User Principal Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Results will be populated here -->
+        </tbody>
+    </table>
+    <button id="updateRoleButton" class="btn btn-success">Update Role</button> <button id="deleteRoleButton"  class="btn btn-danger">Delete User</button>
+    @section Scripts {
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $(document).ready(function () {
+
+                GetUsersOnLoad();
+
+                $('#searchButton').click(function () {
+                    const searchText = $('#searchTextBox').val();
+                    if (searchText) {
+                        $.ajax({
+                            url: '/UserManagement/SearchUser',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ txt: searchText }),
+                            success: function (response) {
+                                onSearchSuccess(response);
+                            },
+                            error: function (error) {
+                                console.error('Error searching users:', error);
+                            }
+                        });
+                    }
+                });
+
+                $('#assignRoleButton').click(async function () {
+                    const selectedUser = $('input[name="selectedUser"]:checked').val();
+                    const selectedRow = $('input[name="selectedUser"]:checked').closest('tr');
+                    const selectedRole = selectedRow.find('select').val();
+                    const selectedDisplayName = selectedRow.find('.displayName-cell').text();
+
+                    if (selectedUser && selectedRole) {
+
+                        const tbody = $('#getResultTable tbody');
+                        const existingUpns = new Set();
+
+                        // Extract existing UPNs from the table
+                        tbody.find('.upn-cell').each(function () {
+                            existingUpns.add($(this).text());
+                        });
+
+                        if (existingUpns.has(selectedUser)) {
+                            alert(`User ${selectedUser} already exists.`);
+                            return;
+                        }
+
+                        try {
+                            const response = await $.ajax({
+                                url: '/UserManagement/AssignRole',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ displayName: selectedDisplayName, upn: selectedUser, role: selectedRole }),
+                            });
+
+                            alert('Role assigned successfully');
+                            GetUsersOnLoad();
+                            const tbody = $('#resultsTable tbody');
+                            tbody.empty();
+                        } catch (error) {
+                            console.error('Error assigning role:', error);
+                        }
+                    } else {
+                        alert('Please select a user and a role');
+                    }
+                });
+
+                $('#updateRoleButton').click(async function () {
+                    const selectedUserId = $('input[name="selectedUpdatedUser"]:checked').val();
+                    const selectedRow = $('input[name="selectedUpdatedUser"]:checked').closest('tr');
+                    const selectedRole = selectedRow.find('select').val();
+                    const selectedUpn = selectedRow.find('.upn-cell').text();
+                    const selectedDisplayName = selectedRow.find('.displayName-cell').text();
+
+                    if (selectedUserId) {
+                        try {
+                            const response = await $.ajax({
+                                url: '/UserManagement/UpdateRole',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ id: selectedUserId, displayName: selectedDisplayName, upn: selectedUpn, role: selectedRole }),
+                            });
+
+                            alert('User role updated successfully');
+                            GetUsersOnLoad();
+                        } catch (error) {
+                            console.error('Error assigning role:', error);
+                        }
+                    } else {
+                        alert('Please select a user to update');
+                    }
+                });
+
+                $('#deleteRoleButton').click(async function () {
+                    const selectedUserId = $('input[name="selectedUpdatedUser"]:checked').val();
+                    const selectedRow = $('input[name="selectedUpdatedUser"]:checked').closest('tr');
+                    const selectedRole = selectedRow.find('select').val();
+                    const selectedUpn = selectedRow.find('.upn-cell').text();
+                    if (selectedUserId) {
+                        try {
+                            const response = await $.ajax({
+                                url: '/UserManagement/DeleteUser',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ id: selectedUserId, upn: selectedUpn }),
+                            });
+
+                            alert('User removed successfully');
+                            GetUsersOnLoad();
+                        } catch (error) {
+                            console.error('Error assigning role:', error);
+                        }
+                    } else {
+                        alert('Please select a user to delete');
+                    }
+                });
+
+                function onSearchSuccess(response) {
+                    const users = response.users.value;
+                    const tbody = $('#resultsTable tbody');
+                    tbody.empty();
+
+                    users.forEach(user => {
+                        tbody.append(`
+                                                        <tr>
+                                                            <td><input type="radio" name="selectedUser" value="${user.userPrincipalName}"></td>
+                                                            <td class="displayName-cell">${user.displayName}</td>
+                                                            <td>${user.userPrincipalName}</td>
+                                                            <td>
+                                                                <select>
+                                                                    <option value="User">User</option>
+                                                                    <option value="Admin">Admin</option>
+                                                                </select>
+                                                            </td>
+                                                        </tr>
+                                                    `);
+                    });
+
+                    $('#resultsTable').show();
+                    $('#assignRoleButton').show();
+                }
+
+                function GetUsersOnLoad() {
+                    $.ajax({
+                        url: '/UserManagement/GetUsers',
+                        type: 'GET',
+                        contentType: 'application/json',
+                        success: function (response) {
+                            ListUsers(response);
+                        },
+                        error: function (error) {
+                            console.error('Error searching users:', error);
+                        }
+                    });
+                }
+
+                function ListUsers(response) {
+                    const listusers = response;
+                    const tbody = $('#getResultTable tbody');
+                    tbody.empty();
+
+                    listusers.users.forEach(user => {
+                        tbody.append(`
+                                          <tr>
+                                            <td><input type="radio" name="selectedUpdatedUser" value="${user.id}"></td>
+                                            <td class="displayName-cell">${user.displayName}</td>
+                                            <td class="upn-cell">${user.upn}</td>
+                                            <td>
+                                                <select>
+                                                    <option value="User" ${user.Role === 'User' ? 'selected' : ''}>User</option>
+                                                    <option value="Admin" ${user.Role === 'Admin' ? 'selected' : ''}>Admin</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                      `);
+                    });
+
+                    $('#resultsTable').show();
+                    $('#assignRoleButton').show();
+                }
+            });
+        </script>
+    }
+
+</main>
+
