@@ -1,0 +1,395 @@
+﻿@{
+    ViewBag.Title = "Management Portal";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+
+<style>
+    .chart-container {
+        display: flex;
+        justify-content: center; /* Horizontally center */
+        align-items: center; /* Vertically center */
+    }
+
+    .side-by-side-container {
+        display: flex; /* Flexbox layout */
+        justify-content: space-between; /* Space between chart and table */
+        align-items: flex-start; /* Align items at the top */
+        gap: 20px; /* Space between chart and table */
+    }
+
+    .chart-container {
+        flex: 1; /* Chart takes up part of the available space */
+    }
+
+    .table {
+        flex: 2; /* Table takes up more space than the chart */
+        max-width: 100%; /* Ensure the table doesn’t exceed its container */
+    }
+</style>
+
+<h2>Management Portal</h2><br />
+@*<div>
+        Total (USD)
+    </div>
+    <div id="totalCost" style="font-size:xx-large;font-weight:bold; display: inline-block;">$0.00</div>*@
+
+
+<!-- Pie chart canvas -->
+<!-- First Row -->
+<!-- Nav tabs -->
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="first-tab" data-bs-toggle="tab" href="#firstRowTab" role="tab" aria-controls="firstRowTab" aria-selected="true">Cost Chart & Resources <i class="fa fa-chart-bar"></i></a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="second-tab" data-bs-toggle="tab" href="#secondRowTab" role="tab" aria-controls="secondRowTab" aria-selected="false">User Prompt & Feedback Chart <i class="fa fa-comment"></i></a>
+    </li>
+</ul>
+
+<!-- Tab content -->
+<div class="tab-content" id="myTabContent">
+    <!-- First Row Tab (Cost Chart & Resources Table) -->
+    <div class="tab-pane fade show active" id="firstRowTab" role="tabpanel" aria-labelledby="first-tab">
+        <br />
+        <br />
+        <select id="timeframeDropdown" style="display: inline-block;"><option value="MonthToDate" selected>Month To Date</option><option value="TheLastBillingMonth">Last Month</option></select>
+        <i id="costSpinner" class='fa fa-gear fa-spin' style='font-size:xx-large;color:black;display:none;position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);'></i>
+        <div class="row">
+            <!-- First Column in the First Row (Chart) -->
+            <div class="col-md-4">
+                <!-- Chart Container -->
+                <div id="divCanvas" class="chart-container" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                    <canvas id="costChart" style="max-width: 500px; max-height: 500px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Second Column in the First Row (Table) -->
+            <div class="col-md-8">
+                <!-- Table to display the data -->
+                <table id="resourcesTable" class="table">
+                    <thead class="table-info">
+                        <tr>
+                            <th>Resource Name</th>
+                            <th>Resource Type</th>
+                            <th>Location</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align:right;"><strong>Total:</strong></td>
+                            <td id="totalCostFooter">$0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row Tab (User Prompt & Thumbs Chart) -->
+    <div class="tab-pane fade" id="secondRowTab" role="tabpanel" aria-labelledby="second-tab">
+        <br />
+        <br />
+        <div class="row">
+            <!-- First Column in the Second Row (Card) -->
+            <div class="col-md-4 d-flex justify-content-center">
+                <!-- Card Container -->
+                <div class="card bg-light mb-3" style="max-width: 18rem;">
+                    <div class="card-header">Total Prompts</div>
+                    <div class="card-body">
+                        <h1 id="divUsersPrompt" class="card-title" style="text-align:center"></h1>
+                        <p class="card-text"><p class="card-text">
+                            This metric reflects the total number of questions asked by users through the chat platform. By analyzing these prompts, you can gain valuable insights into user interests, common queries, and the overall engagement level within the conversation.
+                        </p>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Column in the Second Row (Thumbs Chart) -->
+            <div class="col-md-8">
+                <div id="divCanvasThumbsSign" class="chart-container">
+                    <canvas id="thumbsChart" style="max-width: 400px; max-height: 400px;"></canvas>
+                </div>
+            </div>
+        </div><br />
+        <div class="row">
+            <div class="col-md-12">
+                <!-- Table to display the data -->
+                <table id="promptTable" class="table">
+                    <thead class="table-info">
+                        <tr>
+                            <th>Prompt</th>
+                            <th>Response</th>
+                            <th>Feedback</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- jQuery AJAX to fetch data -->
+
+<script type="text/javascript">
+    var costChart; // Declare the chart variable globally
+    $(document).ready(function () {
+        $("#costSpinner").css('display', 'block');
+            var selectedTimeframe = $("#timeframeDropdown").val(); // Get the selected timeframe
+        fetchResources(selectedTimeframe);
+        fetchPromptsSummary();
+
+        $("#timeframeDropdown").change(function () {
+            $("#costSpinner").css('display', 'block');
+                var selectedTimeframe = $(this).val(); // Get the selected timeframe
+
+                // Perform the AJAX request with the selected timeframe
+                fetchResources(selectedTimeframe);
+            });
+        });
+
+        // Function to fetch resources based on selected timeframe
+    function fetchResources(timeframe) {
+        $.ajax({
+            url: '@Url.Action("GetResourcesList", "ManagementPortal")',
+            type: "GET",
+            dataType: 'json',
+            data: { timeframe: timeframe },  // Pass the selected timeframe as a parameter
+            success: function (data) {
+                // Clear previous results
+                $("#resourcesTable tbody").empty();
+                /*//document.getElementById("totalCost").textContent = "$0.00";*/
+                if (data && data.length > 0) {
+                    // Iterate through each resource and append it to the table
+                    $.each(data, function (index, resource) {
+                        var row = "<tr>"
+                            + "<td>" + resource.name + "</td>"
+                            + "<td>" + resource.type + "</td>"
+                            + "<td>" + resource.location + "</td>"
+                            + "<td class='cost'>$" + resource.cost.toFixed(2) + "</td>"
+                            + "</tr>";
+                        $("#resourcesTable tbody").append(row);
+
+                    });
+                    calculateTotalCost();
+                    $("#costSpinner").css('display', 'none');
+                    $("#divCanvas").css('display', 'block');
+                    createOrUpdateChart();
+                } else {
+                    $("#resourcesTable tbody").append("<tr><td colspan='6'>No resources found</td></tr>");
+                    $("#costSpinner").css('display', 'none');
+                    $("#divCanvas").css('display', 'none');
+                }
+            },
+            error: function (xhr, status, error) {
+                alert("Error fetching resources: " + error);
+            }
+        });
+    }
+    function fetchPromptsSummary() {
+        $.ajax({
+            url: '@Url.Action("GetPromptsSummary", "ManagementPortal")', // Replace with your actual controller name
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                // Assuming data is an array of objects with properties 'prompt', 'response', and 'thumbsStatus'
+                $('#divUsersPrompt').text(data.length);
+
+                // Initialize counts for the pie chart
+                var thumbsUpCount = 0;
+                var thumbsDownCount = 0;
+
+                // Clear any existing rows in the table
+                $('#promptTable tbody').empty();
+
+                // Populate the table
+                data.forEach(function (item) {
+                    // Determine the feedback based on thumbsStatus
+                    if (item.thumbsStatus != null && item.thumbsStatus != "") {
+                        var feedback = item.thumbsStatus === 'up' ? 'Positive' : 'Negative';
+
+                        // Append a row to the table body
+                        $('#promptTable tbody').append(`
+                    <tr>
+                        <td>${item.prompt}</td>
+                        <td>${item.text}</td>
+                        <td>${feedback}</td>
+                    </tr>
+                `);
+                    }
+
+                    // Count the number of 'up' and 'down' statuses for the pie chart
+                    if (item.thumbsStatus === 'up') {
+                        thumbsUpCount++;
+                    } else if (item.thumbsStatus === 'down') {
+                        thumbsDownCount++;
+                    }
+                });
+
+                // Create Pie chart for thumbsStatus
+                createPieChart(thumbsUpCount, thumbsDownCount);
+            },
+            error: function () {
+                console.error('Something went wrong.');
+            }
+        });
+    }
+
+
+    function createPieChart(thumbsUpCount, thumbsDownCount) {
+        var ctx = document.getElementById('thumbsChart').getContext('2d');
+        var totalCount = thumbsUpCount + thumbsDownCount; // Calculate total value
+
+        // Data for the pie chart
+        var data = {
+            labels: ['Positive', 'Negative'],
+            datasets: [{
+                label: 'Thumbs Status',
+                data: [thumbsUpCount, thumbsDownCount], // Count values
+                backgroundColor: ['#36A2EB', '#FF6384'], // Colors for the segments
+                hoverOffset: 4
+            }]
+        };
+
+        // Create the pie chart using Chart.js
+        var thumbsChart = new Chart(ctx, {
+            type: 'pie', // Pie chart
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total Feedbacks: ' + totalCount // Show total value as the chart title
+                    }
+                }
+            }
+        });
+    }
+
+
+
+    function calculateTotalCost() {
+        let total = 0;
+
+        // Get all elements with class "cost"
+        let costs = document.querySelectorAll("#resourcesTable .cost");
+
+        // Loop through the cost elements and sum up the values
+        costs.forEach(function (costElement) {
+            // Remove the "$" sign and convert to a number
+            let cost = parseFloat(costElement.textContent.replace('$', ''));
+            total += cost;
+        });
+
+        // Display the total cost in the div with two decimal places
+        //document.getElementById("totalCost").textContent = "$" + total.toFixed(2);
+        document.getElementById("totalCostFooter").textContent = "$" + total.toFixed(2);
+    }
+
+    function createOrUpdateChart() {
+        // Extract resource names and costs from the table
+        var resourceNames = [];
+        var resourceCosts = [];
+
+        $('#resourcesTable tbody tr').each(function () {
+            var resourceName = $(this).find('td:first').text();
+            var resourceCostText = $(this).find('.cost').text();
+
+            // Remove the $ sign and convert the cost to a float
+            var resourceCost = parseFloat(resourceCostText.replace('$', '').trim());
+
+            resourceNames.push(resourceName);
+            resourceCosts.push(resourceCost);
+        });
+
+        // Calculate total cost
+        var totalCost = resourceCosts.reduce(function (acc, value) { return acc + value; }, 0);
+
+        // Destroy the existing chart if it exists
+        if (costChart) {
+            costChart.destroy();
+        }
+
+        // Define modern and classic color palette
+        var modernClassicColors = [
+            '#4E73DF',  // Soft Blue
+            '#1CC88A',  // Calm Green
+            '#36B9CC',  // Muted Cyan
+            '#F6C23E',  // Subtle Yellow
+            '#858796',  // Soft Gray
+            '#E74A3B',  // Warm Red
+            '#5A5C69'   // Neutral Dark Gray
+        ];
+
+        // Create the doughnut (donut) chart using Chart.js
+        var ctx = document.getElementById('costChart').getContext('2d');
+        costChart = new Chart(ctx, {
+            type: 'doughnut',  // Change to 'doughnut' for a donut chart
+            data: {
+                labels: resourceNames,
+                datasets: [{
+                    label: 'Cost',
+                    data: resourceCosts,
+                    backgroundColor: modernClassicColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '70%',  // Creates the hole in the center for the donut chart
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Cost Breakdown',
+                        font: {
+                            size: 20
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    // Custom plugin to display Total Cost in the center
+                    tooltip: {
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                return tooltipItem.label + ': $' + tooltipItem.raw.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                beforeDraw: function (chart) {
+                    var width = chart.width,
+                        height = chart.height,
+                        ctx = chart.ctx;
+
+                    ctx.restore();
+                    var fontSize = (height / 200).toFixed(2);
+                    ctx.font = fontSize + "em sans-serif";
+                    ctx.textBaseline = "middle";
+
+                    var text = "$" + totalCost.toFixed(2),
+                        textX = Math.round((width - ctx.measureText(text).width) / 2),
+                        textY = height / 2;
+
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        });
+    }
+
+
+
+</script>

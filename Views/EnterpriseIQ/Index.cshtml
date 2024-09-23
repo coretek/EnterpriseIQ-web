@@ -4,6 +4,8 @@
 }
 
 <script>
+    var thumbsupdownId;
+    var currentThumbSelection = ""; // Track current thumbs state
      $(document).ready(function() {
          CallHistory();
          $("#btnNew").on("click", function () {
@@ -45,6 +47,7 @@
     }
 
     function getChat(id) {
+        
         $.ajax({
             url: '@Url.Action("GetCosmosDataById", "EnterpriseIQ")', // Replace "ControllerName" with your actual controller name
             data: { id: id },
@@ -55,6 +58,7 @@
                 $("#csrchtxt").prop("disabled", true);
                 $("#btnSearch").prop("disabled", true);
                 $("#csrchtxt").val(response.prompt);
+                thumbsupdownId = id;
             },
             error: function () {
                 console.error('Something went wrong.');
@@ -85,6 +89,7 @@
                   $("#txtCompletion").html("Internal Server Error, try after sometime or call system administrator!");
               }
               else {
+                  thumbsupdownId = response.id;
                   FillData(response, "new");
               }
           },
@@ -122,6 +127,8 @@
 
             // Display the formatted information in the 'insurance-info' div
             $('#txtCompletion').html(formattedHTML);
+            currentThumbSelection = response.thumbsStatus;
+            appendIcons(response.thumbsStatus);
 
             if (param == "new") {
                 $("#imageOverlay").show();
@@ -234,6 +241,65 @@
         $("#popupImag").attr("src", imageUrl);
         $("#popupText").html(text);
         $('#myModal').modal('show');
+    }
+
+   
+    function setThumbs(handSign) {
+        if (thumbsupdownId == "" || thumbsupdownId == null) {
+            return;
+        }
+        if (currentThumbSelection === handSign) {
+            // Unselect current thumb
+            appendIcons(""); // Reset icons to default (neutral)
+            currentThumbSelection = ""; // Reset the state
+            handSign = ""; // Send an empty value to indicate unselection
+        } else {
+            appendIcons(handSign);
+            currentThumbSelection = handSign; // Update the current selection
+        }
+        $.ajax({
+            url: '/EnterpriseIQ/ThumbsHandler', // Your controller action URL
+            type: 'POST',
+            data: {
+                thumbsStatus: handSign, // Thumbs up or down value
+                id: thumbsupdownId // You can send an ID or any other data if necessary
+            },
+            success: function (response) {
+                // Handle success (e.g., display a message, update the UI)
+            },
+            error: function (xhr, status, error) {
+                // Handle error
+            }
+        });
+    }
+
+
+    function appendIcons(handSign) {
+        var thumbIconsdiv = document.getElementById('thumbIcons');
+        if (thumbIconsdiv) {
+            thumbIconsdiv.remove();
+        }
+        var iconsContainer = document.createElement('div');
+        iconsContainer.id = 'thumbIcons';
+        iconsContainer.style.position = 'absolute';
+        iconsContainer.style.bottom = '10px';
+        iconsContainer.style.right = '10px';
+        if (handSign == "up") {
+            iconsContainer.innerHTML = `
+ <i class="fa fa-thumbs-up" style="font-size:24px; margin-right:10px; cursor:pointer;color:green" onclick="setThumbs('up');"></i>
+  <i class="far fa-thumbs-down" style="font-size:24px; cursor:pointer;"  onclick="setThumbs('down');"></i>`;
+        }
+        else if (handSign == "down") {
+            iconsContainer.innerHTML = `
+     <i class="far fa-thumbs-up" style="font-size:24px; margin-right:10px; cursor:pointer;" onclick="setThumbs('up');"></i>
+     <i class="fa fa-thumbs-down" style="font-size:24px; cursor:pointer;color:red" onclick="setThumbs('down');"></i>`;
+        }
+        else {
+            iconsContainer.innerHTML = `
+<i class="far fa-thumbs-up" style="font-size:24px; margin-right:10px; cursor:pointer;" onclick="setThumbs('up');"></i>
+<i class="far fa-thumbs-down" style="font-size:24px; cursor:pointer;" onclick="setThumbs('down');"></i>`;
+        }
+        document.getElementById('txtCompletion').appendChild(iconsContainer);
     }
 
     $(document).ready(function() {
@@ -504,7 +570,9 @@
             <div class="col-md-6">
                 <div class="search-results">
                     <div class="search-item">
-                        <div id="txtCompletion" style="overflow:auto;height:580px"></div>
+                        <div id="txtCompletion" style="overflow:auto;height:580px; position:relative;">
+                        </div>
+
                     </div>
                     <div class="search-input-container">
                         <textarea rows="3" id="csrchtxt" class="search-input" placeholder="Enter your search term"></textarea>
