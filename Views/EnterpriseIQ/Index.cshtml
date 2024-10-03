@@ -220,13 +220,13 @@
     }
 
     function downloadFile(filename) {
-        window.open("/EnterpriseIQ/DownloadFileAsync?filename=" + filename, "_blank");
+        window.open("/v1/EnterpriseIQ/DownloadFileAsync?filename=" + filename, "_blank");
 
-        //window.location.href = "/EnterpriseIQ/DownloadFileAsync?filename=" + filename;
+        //window.location.href = "/v1/EnterpriseIQ/DownloadFileAsync?filename=" + filename;
         return false;
         //$.ajax({
         //    type: "POST", // or "GET" depending on your server-side setup
-        //    url: "/EnterpriseIQ/DownloadFileAsync", // Replace with your controller's URL
+        //    url: "/v1/EnterpriseIQ/DownloadFileAsync", // Replace with your controller's URL
         //    data: { filename: filename },
         //    success: function (data) {
         //        // Handle success (if needed)
@@ -258,7 +258,7 @@
             currentThumbSelection = handSign; // Update the current selection
         }
         $.ajax({
-            url: '/EnterpriseIQ/ThumbsHandler', // Your controller action URL
+            url: '/v1/EnterpriseIQ/ThumbsHandler', // Your controller action URL
             type: 'POST',
             data: {
                 thumbsStatus: handSign, // Thumbs up or down value
