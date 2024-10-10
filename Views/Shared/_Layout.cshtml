@@ -19,10 +19,10 @@
 
                 $.ajax({
                     type: "POST",
-                    url: "/Account/UpdateTheme",
+                    url: "/v1/Account/UpdateTheme",
                     data: { themeValue: colorPickerValue },
                     success: function (response) {
-                        window.location = "/Account/SignOut";
+                        window.location = "/v1/Account/SignOut";
                     },
                     error: function () {
                         alert("Error deleting blob. Please try again later.");
@@ -69,7 +69,7 @@
                                 contentType: 'application/json',
                                 data: JSON.stringify({ title: newTitle }),
                                 success: function (response) {
-                                    window.location = "/Account/SignOut";
+                                    window.location = "/v1/Account/SignOut";
                                 },
                                 error: function (xhr, status, error) {
                                     console.error("Error updating title: " + error);
@@ -134,11 +134,11 @@
             <ul class="navbar-nav">
                 <!-- Your other navigation items go here -->
                 <li class="nav-item">
-                    <a style="margin-left: 10px; cursor: pointer; display: inline-block;" href="/Admin/UploadSiteLogo">
+                    <a style="margin-left: 10px; cursor: pointer; display: inline-block;" href="/v1/Admin/UploadSiteLogo">
                         <img id="myimage" alt="Brand Logo" style="margin-bottom: 6px; position: relative; max-width: 100%;max-height:55px" src="~/Images/Brand_Logo.png" />
                     </a>
-                    <a class="nav-link" style="margin-left: 10px; cursor: pointer; color: white; display: inline-block;" href="/Home"><i class="fas fa-home"></i> Home</a>
-                    <a class="nav-link" style="margin-left: 5px; cursor: pointer; color: white; display: inline-block;" href="/EnterpriseIQ"><i class="fas fa-comment"></i> EntIQ</a>
+                    <a class="nav-link" style="margin-left: 10px; cursor: pointer; color: white; display: inline-block;" href="/v1/Home"><i class="fas fa-home"></i> Home</a>
+                    <a class="nav-link" style="margin-left: 5px; cursor: pointer; color: white; display: inline-block;" href="/v1/EnterpriseIQ"><i class="fas fa-comment"></i> EntIQ</a>
                 </li>
                 <!-- Add more navigation items as needed -->
             </ul>
@@ -166,10 +166,12 @@
                     </a>
                     <div id="settings-dropdown" style="display: none; position: absolute; top: 100%; left: -160px;">
                         <!-- Dropdown items go here -->
-                        <a href="/Admin" class="dropdown-item">Admin</a>
-                        <a href="/UserManagement" class="dropdown-item">RBAC</a>
-                        <a href="/Admin/Logs" class="dropdown-item">Logs</a>
-                        <a href="/Home/FAQs" class="dropdown-item">FAQs</a>
+                        <a href="/v1/Admin" class="dropdown-item">Admin</a>
+                        @*TODO: Enable once we turn RBAC back on*@
+                        @*<a href="/v1/UserManagement" class="dropdown-item">RBAC</a>*@
+                        <a href="/v1/ManagementPortal" class="dropdown-item">Management Portal</a>
+                        <a href="/v1/Admin/Logs" class="dropdown-item">Logs</a>
+                        <a href="/v1/Home/FAQs" class="dropdown-item">FAQs</a>
                         @if (Request.IsAuthenticated)
                         {
                             @Html.ActionLink("Sign out", "SignOut", "Account")
@@ -199,7 +201,7 @@
         if (jqxhr.status == 401) {
             // Redirect to the login page or show a login modal
             alert("Session expired, kindly log-in back");
-            window.location.href = '/Account/SignIn';
+            window.location.href = '/v1/Account/SignIn';
         }
     });
 </script>
