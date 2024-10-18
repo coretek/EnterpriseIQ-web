@@ -36,7 +36,7 @@
     }
     function searchBlobFiles() {
         var search = document.getElementById("search").value;
-        window.location.href = "/Admin/Index?search=" + search;
+        window.location.href = "/v1/Admin/Index?search=" + search;
     }
 
     function deleteAllBlobFiles() {
@@ -45,7 +45,7 @@
             $("#blobDeleteMessage").html("Started Deleting all blob files, kindly do not refresh or close browser...<i class='fa fa-gear fa-spin' style='font-size:24px;color:white'></i>");
             $.ajax({
                 type: "POST",
-                url: "/Admin/DeleteAllBlob",
+                url: "/v1/Admin/DeleteAllBlob",
                 success: function (response) {
                     if (response.success) {
                         $("#blobDeleteMessage").html(response.message + "<i class='fa fa-gear' style='font-size:24px;color:white'></i>");
@@ -64,7 +64,7 @@
         if (confirm("Are you sure you want to delete this blob?")) {
             $.ajax({
                 type: "POST",
-                url: "/Admin/DeleteBlob",
+                url: "/v1/Admin/DeleteBlob",
                 data: { blobName: blobName },
                 success: function (response) {
                     if (response.success) {
@@ -85,7 +85,7 @@
         if (confirm("Are you sure you want to Update this System Message?")) {
             $.ajax({
                 type: "POST",
-                url: "/Admin/UpdateSystemMessage",
+                url: "/v1/Admin/UpdateSystemMessage",
                 data: { sysmsg: $("#txtSystemMessage").val() },
                 success: function (response) {
                     if (response.success) {
@@ -143,7 +143,7 @@
                 $("#resultMessage").append(processingIcon);
                 $("#resultMessage").append("</br>");
                 $.ajax({
-                    url: '/Admin/ProcessPDFAndImageFiles',
+                    url: '/v1/Admin/ProcessPDFAndImageFiles',
                     type: 'POST',
                     success: function (data) {
                         $("#resultMessage").find(".fa-spin").removeClass("fa-spin");
@@ -165,7 +165,7 @@
                             $("#resultMessage").append(processingIcon);
                             $("#resultMessage").append("</br>");
                             $.ajax({
-                                url: '/Admin/ProcessWordtoImageFileAsync',
+                                url: '/v1/Admin/ProcessWordtoImageFileAsync',
                                 type: 'POST',
                                 success: function (data) {
                                     $("#resultMessage").find(".fa-spin").removeClass("fa-spin");
@@ -189,7 +189,7 @@
                                         $("#resultMessage").append("</br>");
 
                                         $.ajax({
-                                            url: '/Admin/RefreshIndexing',
+                                            url: '/v1/Admin/RefreshIndexing',
                                             type: 'POST',
                                             success: function (data) {
                                                 $("#resultMessage").find(".fa-spin").removeClass("fa-spin");
@@ -259,7 +259,7 @@
                             // Handle 401 Unauthorized
                             // Redirect to the login page
                             alert("Session is expired. please login again");
-                            window.location.href = '/Account/SignIn';
+                            window.location.href = '/v1/Account/SignIn';
                         }
                     },
                     error: function () {

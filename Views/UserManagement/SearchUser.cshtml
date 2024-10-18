@@ -67,7 +67,7 @@
                     const searchText = $('#searchTextBox').val();
                     if (searchText) {
                         $.ajax({
-                            url: '/UserManagement/SearchUser',
+                            url: '/v1/UserManagement/SearchUser',
                             type: 'POST',
                             contentType: 'application/json',
                             data: JSON.stringify({ txt: searchText }),
@@ -104,7 +104,7 @@
 
                         try {
                             const response = await $.ajax({
-                                url: '/UserManagement/AssignRole',
+                                url: '/v1/UserManagement/AssignRole',
                                 type: 'POST',
                                 contentType: 'application/json',
                                 data: JSON.stringify({ displayName: selectedDisplayName, upn: selectedUser, role: selectedRole }),
@@ -132,7 +132,7 @@
                     if (selectedUserId) {
                         try {
                             const response = await $.ajax({
-                                url: '/UserManagement/UpdateRole',
+                                url: '/v1/UserManagement/UpdateRole',
                                 type: 'POST',
                                 contentType: 'application/json',
                                 data: JSON.stringify({ id: selectedUserId, displayName: selectedDisplayName, upn: selectedUpn, role: selectedRole }),
@@ -156,7 +156,7 @@
                     if (selectedUserId) {
                         try {
                             const response = await $.ajax({
-                                url: '/UserManagement/DeleteUser',
+                                url: '/v1/UserManagement/DeleteUser',
                                 type: 'POST',
                                 contentType: 'application/json',
                                 data: JSON.stringify({ id: selectedUserId, upn: selectedUpn }),
@@ -199,7 +199,7 @@
 
                 function GetUsersOnLoad() {
                     $.ajax({
-                        url: '/UserManagement/GetUsers',
+                        url: '/v1/UserManagement/GetUsers',
                         type: 'GET',
                         contentType: 'application/json',
                         success: function (response) {
